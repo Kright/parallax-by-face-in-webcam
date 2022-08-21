@@ -28,7 +28,9 @@ def main(): Unit = {
 }
 
 def processImagesAndShow(): Unit = {
-  val imageSize = Dimension(176, 144)
+//    val imageSize = Dimension(176, 144)
+  val imageSize: Dimension = WebcamResolution.QVGA.getSize // detecting face for this size is slower
+
   val jpanelSize = Dimension(1680, 1024)
 
   val webcam = Webcam.getDefault()
@@ -39,6 +41,7 @@ def processImagesAndShow(): Unit = {
   val detector = new HaarCascadeDetector()
 
   val parallaxCalculator = new ParallaxCalculator(Vector2d(imageSize.width, imageSize.height))
+  var prevTime: Long = System.currentTimeMillis()
 
   val jpanel = new JPanel() {
     override def paintComponent(g: Graphics): Unit = {
@@ -47,12 +50,24 @@ def processImagesAndShow(): Unit = {
       val faces = detector.detectFaces(ImageUtilities.createFImage(image))
       val parallax = parallaxCalculator(faces)
 
+
+//      g.drawImage(
+//        backgroundImage,
+//        parallax.x.toInt - backgroundImage.getWidth() / 2 + jpanelSize.width / 2,
+//        parallax.y.toInt - backgroundImage.getHeight() / 2 + jpanelSize.height / 2,
+//        null
+//      )
+
+      val scale = 0.5 / parallaxCalculator.faceSize
+
       g.drawImage(
-        backgroundImage,
-        parallax.x.toInt - backgroundImage.getWidth() / 2 + jpanelSize.width / 2,
-        parallax.y.toInt - backgroundImage.getHeight() / 2 + jpanelSize.height / 2,
-        null
-      )
+              backgroundImage,
+              (parallax.x - (backgroundImage.getWidth() * scale) / 2 + jpanelSize.width / 2).toInt,
+              (parallax.y - (backgroundImage.getHeight() * scale) / 2 + jpanelSize.height / 2).toInt,
+              (backgroundImage.getWidth() * scale).toInt,
+              (backgroundImage.getHeight() * scale).toInt,
+              null
+            )
 
       g.drawImage(image, 0, 0, null)
       g.setColor(Color.RED)
@@ -62,6 +77,10 @@ def processImagesAndShow(): Unit = {
       }
 
       g.drawString(s"scale = ${parallaxCalculator.scale.toInt}", 0, g.getFontMetrics.getHeight)
+      val newTime = System.currentTimeMillis()
+      g.drawString(s"delay = ${newTime - prevTime}", 0, g.getFontMetrics.getHeight*2)
+      prevTime = newTime
+
       this.repaint()
     }
   }
@@ -106,6 +125,8 @@ class MyKeyListener(webcam: Webcam, parallaxCalculator: ParallaxCalculator) exte
         parallaxCalculator.mixFactor = 0.5
       case KeyEvent.VK_8 =>
         parallaxCalculator.mixFactor = 0.8
+      case KeyEvent.VK_7 =>
+        parallaxCalculator.mixFactor = 0.95
 
   override def keyReleased(e: KeyEvent): Unit = {}
 }
